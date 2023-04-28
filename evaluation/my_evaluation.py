@@ -100,7 +100,7 @@ def evaluate_L2R(INPUT_PATH,GT_PATH,OUTPUT_PATH,JSON_PATH,verbose=False):
             
             if 'sdlogj' == _eval['metric']:
                 # jac_det = (jacobian_determinant(disp_field[np.newaxis, :, :, :, :].transpose((0,4,1,2,3))) + 3).clip(0.000000001, 1000000000)
-                jac_det = (jacobian_determinant(disp_field[np.newaxis, :, :, :, :]) + 3).clip(0.000000001, 1000000000)
+                jac_det = (jacobian_determinant_(disp_field[np.newaxis, :, :, :, :]) + 3).clip(0.000000001, 1000000000)
                 # jac_det = jacobian_determinant(disp_field)
                 log_jac_det = np.log(jac_det)
                 if use_mask and mask_ready:
