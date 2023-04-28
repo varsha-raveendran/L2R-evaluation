@@ -5,9 +5,11 @@ import os.path
 from pathlib import Path
 import pandas
 import argparse
-
+import monai
 from utils import *
 from surface_distance import *
+import scipy
+from scipy.ndimage import zoom
 
 import os
 
@@ -26,10 +28,12 @@ def evaluate_L2R(INPUT_PATH,GT_PATH,OUTPUT_PATH,JSON_PATH,verbose=False):
     eval_pairs=data['eval_pairs']
     len_eval_pairs=len(eval_pairs)
 
+    warp = monai.networks.blocks.Warp(mode="bilinear", padding_mode="border")
+    warp_nearest = monai.networks.blocks.Warp(mode="nearest", padding_mode="border")
     
     #Check if files are complete beforehand
     for idx, pair in enumerate(eval_pairs):
-        disp_name='disp_{}_{}'.format(pair['fixed'][-16:-12], pair['moving'][-16:-12]+'.nii.gz')
+        disp_name='flow_{}_{}'.format(pair['fixed'][-16:-12], pair['moving'][-16:-12]+'.nii.gz')
         disp_path=os.path.join(INPUT_PATH, disp_name)
         if os.path.isfile(disp_path):
             continue
@@ -51,12 +55,17 @@ def evaluate_L2R(INPUT_PATH,GT_PATH,OUTPUT_PATH,JSON_PATH,verbose=False):
         fix_label_path=os.path.join(GT_PATH, pair['fixed'].replace('images','masks'))
         mov_label_path=os.path.join(GT_PATH, pair['moving'].replace('images','masks'))
         #with nii.gz
-        disp_path=os.path.join(INPUT_PATH, 'disp_{}_{}'.format(pair['fixed'][-16:-12], pair['moving'][-16:-12]+'.nii.gz'))
+        disp_path=os.path.join(INPUT_PATH, 'flow_{}_{}'.format(pair['fixed'][-16:-12], pair['moving'][-16:-12]+'.nii.gz'))
         disp_field=nib.load(disp_path).get_fdata()
+        disp_field = np.array([zoom(disp_field[i], 0.5, order=2) for i in range(3)])
+        disp_field = disp_field.astype(np.float16).astype(np.float32)
+        disp_field = np.array([zoom(disp_field[i], 2, order=2) for i in range(3)])
+
 
         shape = np.array(disp_field.shape)
-        if not np.all(shape==expected_shape):
-            raise_shape_error(disp_name, shape, expected_shape)
+        # breakpoint()
+        # if not np.all(shape==expected_shape):
+        #     raise_shape_error(disp_name, shape, expected_shape)
 
         ## load neccessary files 
         if any([True for eval_ in ['tre'] if eval_ in evaluation_methods_metrics]):
@@ -69,8 +78,9 @@ def evaluate_L2R(INPUT_PATH,GT_PATH,OUTPUT_PATH,JSON_PATH,verbose=False):
             D,H,W = fixed_seg.shape
             identity = np.meshgrid(np.arange(D), np.arange(H), np.arange(W), indexing='ij')
             
-            warped_seg = map_coordinates(moving_seg, identity + disp_field.transpose(3,0,1,2), order=0)
-            
+            # warped_seg = map_coordinates(moving_seg, identity + disp_field.transpose(3,0,1,2), order=0)
+            warped_seg = map_coordinates(moving_seg, identity + disp_field, order=0)
+            # warped_seg = warp_nearest(moving_seg.unsqueeze(0).unsqueeze(0), disp_field.unsqueeze(0))
         
         if use_mask:
             mask_path= os.path.join(GT_PATH, pair['fixed'].replace('images','masks'))
@@ -89,7 +99,9 @@ def evaluate_L2R(INPUT_PATH,GT_PATH,OUTPUT_PATH,JSON_PATH,verbose=False):
             ### SDlogJ
             
             if 'sdlogj' == _eval['metric']:
-                jac_det = (jacobian_determinant(disp_field[np.newaxis, :, :, :, :].transpose((0,4,1,2,3))) + 3).clip(0.000000001, 1000000000)
+                # jac_det = (jacobian_determinant(disp_field[np.newaxis, :, :, :, :].transpose((0,4,1,2,3))) + 3).clip(0.000000001, 1000000000)
+                jac_det = (jacobian_determinant(disp_field[np.newaxis, :, :, :, :]) + 3).clip(0.000000001, 1000000000)
+                # jac_det = jacobian_determinant(disp_field)
                 log_jac_det = np.log(jac_det)
                 if use_mask and mask_ready:
                     case_results[_name]=np.ma.MaskedArray(log_jac_det, 1-mask[2:-2, 2:-2, 2:-2]).std()

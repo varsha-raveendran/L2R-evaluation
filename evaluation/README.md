@@ -27,3 +27,4 @@ python create_evaluation_config.py -o evaluation_configs/ -c ../tmp/OASIS_datase
   -v
 ```
 
+python evaluation.py -i zero_def_fields/NLST/ -d /vol/pluto/users/raveendr/data/NLST/ -o output_test/NLST_zero_def.json -c evaluation_configs/NLST_VAL_evaluation_config.json -v

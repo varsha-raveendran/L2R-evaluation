@@ -1,9 +1,17 @@
 {
-    "task_name": "NLST", 
+    "task_name": "NLST",
     "evaluation_methods": [
         {
             "name": "LogJacDetStd",
             "metric": "sdlogj"
+        },
+        {
+            "name": "DICE",
+            "metric": "dice",
+            "labels": [
+                1,
+                2
+            ]
         },
         {
             "name": "TRE_kp",
@@ -19,46 +27,46 @@
     ],
     "eval_pairs": [
         {
-            "fixed": "./imagesTr/NLST_0101_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0101_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0007_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0007_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0102_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0102_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0017_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0017_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0103_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0103_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0027_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0027_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0104_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0104_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0037_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0037_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0105_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0105_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0047_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0047_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0106_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0106_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0057_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0057_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0107_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0107_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0067_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0067_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0108_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0108_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0077_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0077_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0109_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0109_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0087_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0087_0001.nii.gz"
         },
         {
-            "fixed": "./imagesTr/NLST_0110_0000.nii.gz",
-            "moving": "./imagesTr/NLST_0110_0001.nii.gz"
+            "fixed": "./imagesTr/NLST_0097_0000.nii.gz",
+            "moving": "./imagesTr/NLST_0097_0001.nii.gz"
         }
     ],
-    "eval_config_version": 0.3,
+    "eval_config_version": 0.2,
     "masked_evaluation": true
 }
