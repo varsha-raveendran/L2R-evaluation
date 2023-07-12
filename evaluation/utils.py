@@ -1,13 +1,53 @@
 import numpy as np
 import scipy.ndimage
 import nibabel as nib
-from evalutils.exceptions import ValidationError
+# from evalutils.exceptions import ValidationError
 from scipy.ndimage import map_coordinates
 from surface_distance import *
 
 
 ##### metrics #####
-def jacobian_determinant(vf):
+#https://github.com/adalca/pystrum/blob/0e7a47e5cc62725dfadc728351b89162defca696/pystrum/pynd/ndutils.py#L111
+
+def ndgrid(*args, **kwargs):
+    """
+    Disclaimer: This code is taken directly from the scitools package [1]
+    Since at the time of writing scitools predominantly requires python 2.7 while we work with 3.5+
+    To avoid issues, we copy the quick code here.
+    Same as calling ``meshgrid`` with *indexing* = ``'ij'`` (see
+    ``meshgrid`` for documentation).
+    Ref : https://github.com/adalca/pystrum/blob/0e7a47e5cc62725dfadc728351b89162defca696/pystrum/pynd/ndutils.py#L208
+    """
+    kwargs['indexing'] = 'ij'
+    return np.meshgrid(*args, **kwargs)
+
+def volsize2ndgrid(volsize):
+    """
+    return the dense nd-grid for the volume with size volsize
+    essentially return the ndgrid fpr
+    """
+    ranges = [np.arange(e) for e in volsize]
+    return ndgrid(*ranges)
+
+def jacobian_determinant_vxm(flow):
+
+    vol_size = flow.shape[:-1]
+    grid = np.stack(volsize2ndgrid(vol_size), len(vol_size))  
+    J = np.gradient(flow + grid)
+
+    dx = J[0]
+    dy = J[1]
+    dz = J[2]
+
+    Jdet0 = dx[:,:,:,0] * (dy[:,:,:,1] * dz[:,:,:,2] - dy[:,:,:,2] * dz[:,:,:,1])
+    Jdet1 = dx[:,:,:,1] * (dy[:,:,:,0] * dz[:,:,:,2] - dy[:,:,:,2] * dz[:,:,:,0])
+    Jdet2 = dx[:,:,:,2] * (dy[:,:,:,0] * dz[:,:,:,1] - dy[:,:,:,1] * dz[:,:,:,0])
+
+    Jdet = Jdet0 - Jdet1 + Jdet2
+
+    return Jdet
+
+def jacobian_determinant_(vf):
     """
     Given a displacement vector field vf, compute the jacobian determinant scalar field.
 
@@ -44,7 +84,7 @@ def jacobian_determinant(vf):
 
     return det
 
-def jacobian_determinant_(disp):
+def jacobian_determinant(disp):
     _, _, H, W, D = disp.shape
     
     gradx  = np.array([-0.5, 0, 0.5]).reshape(1, 3, 1, 1)
@@ -53,15 +93,18 @@ def jacobian_determinant_(disp):
 
     gradx_disp = np.stack([scipy.ndimage.correlate(disp[:, 0, :, :, :], gradx, mode='constant', cval=0.0),
                            scipy.ndimage.correlate(disp[:, 1, :, :, :], gradx, mode='constant', cval=0.0),
-                           scipy.ndimage.correlate(disp[:, 2, :, :, :], gradx, mode='constant', cval=0.0)], axis=1)
+                           scipy.ndimage.correlate(disp[:, 2, :, :, :], gradx, mode='constant', cval=0.0)],
+                          axis=1)
     
     grady_disp = np.stack([scipy.ndimage.correlate(disp[:, 0, :, :, :], grady, mode='constant', cval=0.0),
                            scipy.ndimage.correlate(disp[:, 1, :, :, :], grady, mode='constant', cval=0.0),
-                           scipy.ndimage.correlate(disp[:, 2, :, :, :], grady, mode='constant', cval=0.0)], axis=1)
+                           scipy.ndimage.correlate(disp[:, 2, :, :, :], grady, mode='constant', cval=0.0)], 
+                          axis=1)
     
     gradz_disp = np.stack([scipy.ndimage.correlate(disp[:, 0, :, :, :], gradz, mode='constant', cval=0.0),
                            scipy.ndimage.correlate(disp[:, 1, :, :, :], gradz, mode='constant', cval=0.0),
-                           scipy.ndimage.correlate(disp[:, 2, :, :, :], gradz, mode='constant', cval=0.0)], axis=1)
+                           scipy.ndimage.correlate(disp[:, 2, :, :, :], gradz, mode='constant', cval=0.0)], 
+                          axis=1)
 
     grad_disp = np.concatenate([gradx_disp, grady_disp, gradz_disp], 0)
 
@@ -74,7 +117,7 @@ def jacobian_determinant_(disp):
     return jacdet
 
 def compute_tre(fix_lms, mov_lms, disp, spacing_fix, spacing_mov):
-    
+    print(disp.shape)
     fix_lms_disp_x = map_coordinates(disp[:, :, :, 0], fix_lms.transpose())
     fix_lms_disp_y = map_coordinates(disp[:, :, :, 1], fix_lms.transpose())
     fix_lms_disp_z = map_coordinates(disp[:, :, :, 2], fix_lms.transpose())
@@ -82,7 +125,9 @@ def compute_tre(fix_lms, mov_lms, disp, spacing_fix, spacing_mov):
 
     fix_lms_warped = fix_lms + fix_lms_disp
     
-    return np.linalg.norm((fix_lms_warped - mov_lms) * spacing_mov, axis=1)
+    
+    return np.linalg.norm((fix_lms_warped - mov_lms) * spacing_mov, axis=1), fix_lms_warped
+
 
 
 def compute_dice(fixed,moving,moving_warped,labels):
@@ -105,24 +150,24 @@ def compute_hd95(fixed,moving,moving_warped,labels):
     mean_hd95 =  np.nanmean(hd95)
     return mean_hd95,hd95
 
-##### validation errors #####
-def raise_missing_file_error(fname):
-    message = (
-        f"The displacement field {fname} is missing. "
-        f"Please provide all required displacement fields."
-    )
-    raise ValidationError(message)
+# ##### validation errors #####
+# def raise_missing_file_error(fname):
+#     message = (
+#         f"The displacement field {fname} is missing. "
+#         f"Please provide all required displacement fields."
+#     )
+#     raise ValidationError(message)
     
-def raise_dtype_error(fname, dtype):
-    message = (
-        f"The displacement field {fname} has a wrong dtype ('{dtype}'). "
-        f"All displacement fields should have dtype 'float16'."
-    )
-    raise ValidationError(message)
+# def raise_dtype_error(fname, dtype):
+#     message = (
+#         f"The displacement field {fname} has a wrong dtype ('{dtype}'). "
+#         f"All displacement fields should have dtype 'float16'."
+#     )
+#     raise ValidationError(message)
     
-def raise_shape_error(fname, shape, expected_shape):
-    message = (
-        f"The displacement field {fname} has a wrong shape ('{shape[0]}x{shape[1]}x{shape[2]}x{shape[3]}'). "
-        f"The expected shape of displacement fields for this task is {expected_shape[0]}x{expected_shape[1]}x{expected_shape[2]}x{expected_shape[3]}."
-    )
-    raise ValidationError(message)
+# def raise_shape_error(fname, shape, expected_shape):
+#     message = (
+#         f"The displacement field {fname} has a wrong shape ('{shape[0]}x{shape[1]}x{shape[2]}x{shape[3]}'). "
+#         f"The expected shape of displacement fields for this task is {expected_shape[0]}x{expected_shape[1]}x{expected_shape[2]}x{expected_shape[3]}."
+#     )
+#     raise ValidationError(message)
