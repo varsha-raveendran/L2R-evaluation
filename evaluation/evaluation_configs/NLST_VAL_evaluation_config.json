@@ -2,6 +2,10 @@
     "task_name": "NLST",
     "evaluation_methods": [
         {
+            "name": "NCC",
+            "metric": "ncc"
+        },
+	{
             "name": "LogJacDetStd",
             "metric": "sdlogj"
         },
@@ -9,8 +13,14 @@
             "name": "DICE",
             "metric": "dice",
             "labels": [
-                1,
-                2
+                1
+            ]
+        },
+        {
+            "name": "HD95",
+            "metric": "hd95",
+            "labels": [
+                1
             ]
         },
         {
@@ -68,5 +78,5 @@
         }
     ],
     "eval_config_version": 0.2,
-    "masked_evaluation": true
+    "masked_evaluation": false
 }
